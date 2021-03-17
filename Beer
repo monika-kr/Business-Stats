@@ -1,0 +1,51 @@
+filename refile '/folders/myfolders/Beerdata.csv';
+
+proc import datafile=refile replace
+	dbms=CSV
+	out=WORK.beer REPLACE;
+	getnames=YES;
+run;
+
+/* a  */
+PROC DISTANCE DATA=beer out=beer_d method=SQEUCLID nostd;
+VAR INTERVAL( Price Quality);
+RUN;
+
+/* b)
+
+i)  */
+PROC CLUSTER DATA=beer METHOD=SINGLE PLOTS=DENDROGRAM(VERTICAL) out=beer_o;
+VAR Price Quality;
+ID Brand;
+RUN;
+
+/* 
+ii)  */
+PROC CLUSTER DATA=beer METHOD=complete PLOTS=DENDROGRAM(VERTICAL);
+VAR Price Quality;
+ID Brand;
+RUN;
+
+/* 
+iii)  */
+PROC CLUSTER DATA=beer METHOD=CENTROID PLOTS=DENDROGRAM(VERTICAL) OUT=beer_out;
+VAR Price Quality;
+RUN;
+
+/* c  */
+PROC SORT DATA=beer_o;
+BY _NCL_;
+RUN;
+PROC SGPLOT DATA=beer_o;
+WHERE _NCL_ <6;
+SCATTER X=_NCL_ Y=_RMSSTD_ /MARKERATTRS=(SYMBOL=CIRCLEFILLED);
+SERIES X=_NCL_ Y=_RMSSTD_ / NAME="SERIES";
+RUN;
+
+
+/* d  */
+PROC fastclus data=beer maxclusters=2 out=more_beer random=1;
+var Price Quality;
+RUN;
+
+PROC PRINT DATA=more_beer; RUN;
