@@ -1,0 +1,51 @@
+FILENAME REFFILE '/folders/myfolders/ADMISSION.csv';
+
+PROC IMPORT DATAFILE=REFFILE
+	DBMS=CSV
+	OUT=adm;
+	GETNAMES=YES;
+RUN;
+
+ODS GRAPHICS ON / ATTRPRIORITY=NONE NOBORDER;
+
+PROC SGPLOT DATA=adm;
+ styleattrs datasymbols=(circlefilled trianglefilled squarefilled)
+datacontrastcolors=(red purple green);
+ SCATTER x=gmat y=gpa /group=group;
+LINEPARM X=0 y=3.01665  slope=-0.000536;
+LINEPARM X=0 y=4.639  slope=-0.00287;
+RUN;
+
+PROC DISCRIM DATA=adm POOL=YES SIMPLE manova
+PCOV  WCOV METHOD=NORMAL OUTSTAT=adm_STAT;
+ CLASS group;
+ VAR GPA GMAT;
+RUN;
+
+DATA admnew;
+INPUT GPA GMAT GROUP$10.;
+DATALINES;
+2.8 496 .
+;
+RUN;
+
+PROC DISCRIM DATA=ADM TESTDATA=admnew TESTOUT=PREDICT1 TESTLIST;
+ CLASS group;
+ VAR GMAT GPA;
+RUN;
+PROC PRINT DATA=PREDICT1; RUN;
+
+/* The DISCRIM Procedure Classification Summary for Calibration Data: WORK.ADM
+Resubstitution Summary using Linear Discriminant Function
+
+admited 87.10 % correct
+borderline 96.15 % correct
+rejected 92.86 % correct
+
+              Error Count Estimates for Group
+ 	   Admitted	  Borderline	Not admitt	Total
+Rate	0.1290	    0.0385        0.0714	0.0796
+Priors	0.3333	    0.3333        0.3333	 
+ 
+ 
+If GPA 2.8 and GMAT 496, then 78% chance it will be borderline*/
