@@ -1,0 +1,61 @@
+filename refile '/folders/myfolders/Pounds.csv';
+
+proc import datafile=refile replace
+	dbms=CSV
+	out=WORK.Pounds REPLACE;
+	getnames=YES;
+run;
+PROC CONTENTS DATA=pounds; RUN;
+
+
+ODS GRAPHICS ON / ATTRPRIORITY=NONE NOBORDER;
+PROC SGPLOT DATA=pounds;
+ styleattrs datasymbols=(circlefilled)
+ datacontrastcolors=(blue);
+ SCATTER X=lengths Y=group;
+RUN;
+
+PROC TTEST DATA=pounds;
+CLASS group;
+VAR lengths;
+RUN;
+
+/* c) since p-val (0.02) < 0.05, variances are not equal and so 
+use Quadratic Discriminant Analysis */
+PROC DISCRIM DATA=pounds MANOVA POOL=TEST SIMPLE
+	WCOV PCOV METHOD=NORMAL OUTSTAT= pounds_stat;
+	class Group;
+	var lengths;
+run;
+
+DATA poundsnew;
+INPUT lengths group$9.;
+DATALINES;
+14.02 .
+;
+RUN;
+
+PROC DISCRIM DATA=pounds_STAT TESTDATA=poundsnew TESTOUT=PREDICT2 TESTLIST;
+ CLASS group;
+ VAR lengths;
+RUN;
+PROC PRINT DATA=PREDICT2; RUN;
+
+ /* b) mu_a=14.19200   var_a=0.00334	 where	a=genuine and b=forged
+       mu_b=13.86467   var_b=0.01068	  */
+      
+      
+ /* e)  from A to B  5.48990
+        from B to A  26.34896
+        
+        
+  f)                     True Group
+  		           A					B
+-----------------------------------------------------
+Predicted  A   | 15						0
+group      B   |  0						20
+
+we have perfect classification 
+
+
+   g) if the length is 14.02 the there is 93.787 % chance it is forged. */
