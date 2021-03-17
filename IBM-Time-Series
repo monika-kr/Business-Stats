@@ -1,0 +1,82 @@
+FILENAME REFFILE '/folders/myfolders/IBM.csv';
+
+PROC IMPORT DATAFILE=REFFILE
+	DBMS=CSV
+	OUT=ibm
+	replace;
+	GETNAMES=YES;
+RUN;
+
+/* Add time variable */
+DATA ibm;
+ SET ibm;
+ T=_N_;
+RUN;
+
+/* Plot stock prices */
+proc sgplot data=ibm ;
+ series x=T y=ibm;
+run;
+
+/* Investigate different models */
+
+PROC ARIMA DATA=ibm PLOTS;
+	IDENTIFY VAR=ibm;
+	estimate p=3 q=0 method=ml noint;
+RUN;
+/*  AIC 747.73
+	CBS 756.09
+*/
+
+PROC ARIMA DATA=ibm PLOTS;
+	IDENTIFY VAR=ibm;
+	estimate p=2 q=0 method=ml noint;
+RUN;
+/*  AIC 747.90
+	CBS 753.48
+The white noise graph is not ideal as it has a few non-zero values outside the interval.
+*/
+
+PROC ARIMA DATA=ibm PLOTS;
+	IDENTIFY VAR=ibm;
+	estimate p=1 q=0 method=ml noint;
+RUN;
+/*  AIC 753.25
+	CBS 756.04
+*/
+
+PROC ARIMA DATA=ibm PLOTS;
+	IDENTIFY VAR=ibm;
+	estimate p=1 q=1 method=ml noint;
+RUN;
+/*  AIC 745.94
+	CBS 751.52
+Probably the best model since all graphs indicate good fit and AIC and CBS values
+are the smallest amongst the models.	
+Maximum Likelihood Estimation indicates that both AR(1,1) and MA(1,1) are of siginficance, i.e.
+both are < 0.05.
+Residual analysis also shows no significant autocorrelations and partial autocorrelations.
+Also residuals look fairly normally distributed.
+
+The ARIMA(1,1,1) model can be written as 
+(1 - 0.99992 B) Nabla Z_t = (1 + 0.29295 B) a_t  
+
+*/
+
+/* We can fit the curve to see the general trend of the stocks and
+create predictions regarding stock prices */
+DATA ibm_1;
+INPUT T@@;
+DATALINES;
+121 122 123 124 125
+;
+RUN;
+
+DATA ibm_c;
+SET ibm ibm_1;
+RUN;
+
+PROC GLM DATA=ibm_c;
+MODEL ibm=T T*T / CLI CLM;
+OUTPUT OUT=ibm_p PREDICTED=Prediction;
+run;
